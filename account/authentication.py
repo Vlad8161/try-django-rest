@@ -1,9 +1,12 @@
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
+from account.models import Token
 
-class MyAuthentication(BaseAuthentication):
+
+class PasswordAuthentication(BaseAuthentication):
     def authenticate(self, request):
         username = request.data.get('username')
         if username is None:
@@ -20,9 +23,19 @@ class MyAuthentication(BaseAuthentication):
         except User.MultipleObjectsReturned:
             raise AuthenticationFailed('Too many users for one username :)')
 
-        if user.password != password:
+        if not check_password(password, user.password):
             raise AuthenticationFailed('Invalid password')
 
         return user, None
 
 
+class TokenAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        key = request.data.get('token')
+
+        try:
+            token = Token.objects.get(key=key)
+        except Token.DoesNotExist:
+            raise AuthenticationFailed('Invalid token')
+
+        return token.user, token

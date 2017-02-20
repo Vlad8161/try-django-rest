@@ -1,12 +1,10 @@
-from django.contrib.auth import authenticate
 from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, TokenAuthentication
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from account.authentication import MyAuthentication
+from account.authentication import PasswordAuthentication, TokenAuthentication
+from account.models import Token
 from account.serializers import RegistrationSerializer
 
 
@@ -21,9 +19,9 @@ def register(request):
 
 
 @api_view(['POST'])
-@authentication_classes((MyAuthentication,))
+@authentication_classes((PasswordAuthentication,))
 @permission_classes((IsAuthenticated,))
-def get_auth_token(request):
+def obtain_token(request):
     token = Token()
     token.user = request.user
     token.save()
@@ -32,7 +30,7 @@ def get_auth_token(request):
 
 @api_view(['POST'])
 @authentication_classes((TokenAuthentication,))
-def invalidate_auth_token(request):
+def invalidate_token(request):
     token = request.auth
     token.delete()
     return Response(status=status.HTTP_200_OK)
