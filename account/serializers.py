@@ -8,15 +8,14 @@ class RegistrationSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=40)
     password2 = serializers.CharField(max_length=40)
     username = serializers.CharField(max_length=40)
+    first_name = serializers.CharField(max_length=40, allow_null=True, allow_blank=True)
+    last_name = serializers.CharField(max_length=40, allow_null=True, allow_blank=True)
 
     def update(self, instance, validated_data):
-        return instance
+        pass
 
     def create(self, validated_data):
-        username = validated_data.get('username')
-        password = make_password(validated_data.get('password'))
-        email = validated_data.get('email')
-        return User.objects.create(username=username, password=password, email=email)
+        pass
 
     def validate(self, data):
         if data['password'] != data['password2']:
