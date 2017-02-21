@@ -22,7 +22,6 @@ def register(request):
             last_name=serializer.validated_data.get('last_name'),
             email=serializer.validated_data.get('email')
         )
-        new_user.save()
         new_user_profile = UserProfile(account=new_user)
         new_user_profile.save()
         return Response(status=status.HTTP_200_OK)

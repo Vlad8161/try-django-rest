@@ -4,6 +4,7 @@ from rest_framework.authtoken import views as rest_views
 from main import views
 
 urlpatterns = [
-    url(r'^user_profile$', views.user_profile),
-    url(r'^obtain_token$', rest_views.obtain_auth_token)
+    url(r'^profile$', views.profile),
+    url(r'^profile/(?P<pk>[0-9]{1,10})$', views.profile),
+    url(r'^add-friend/(?P<friend_id>[0-9]{1,10})$', views.add_friend),
 ]
