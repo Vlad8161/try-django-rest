@@ -8,10 +8,12 @@ from rest_framework.response import Response
 from account.authentication import PasswordAuthentication, TokenAuthentication
 from account.models import Token
 from account.serializers import RegistrationSerializer
+from epicmeet.global_permissions import DisableOptionsPermission
 from main.models import UserProfile
 
 
 @api_view(['POST'])
+@permission_classes((DisableOptionsPermission,))
 def register(request):
     serializer = RegistrationSerializer(data=request.data)
     if serializer.is_valid():
@@ -31,7 +33,7 @@ def register(request):
 
 @api_view(['POST'])
 @authentication_classes((PasswordAuthentication,))
-@permission_classes((IsAuthenticated,))
+@permission_classes((IsAuthenticated, DisableOptionsPermission))
 def obtain_token(request):
     token = Token()
     token.user = request.user
@@ -40,7 +42,7 @@ def obtain_token(request):
 
 
 @api_view(['POST'])
-@authentication_classes((TokenAuthentication,))
+@authentication_classes((TokenAuthentication, DisableOptionsPermission))
 def invalidate_token(request):
     token = request.auth
     token.delete()
