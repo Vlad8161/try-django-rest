@@ -8,33 +8,59 @@ from main.models import UserProfile
 from main.serializers import UserProfileSerializer
 
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 @authentication_classes((TokenAuthentication,))
 @permission_classes((IsAuthenticated,))
 def profile(request, pk=None):
-    if pk is None:
-        user_profile = UserProfile.objects.get(account=request.user)
-        serializer = UserProfileSerializer(user_profile)
-        return Response(serializer.data)
-    else:
-        try:
+    try:
+        if pk is None:
+            user_profile = UserProfile.objects.get(account=request.user)
+            serializer = UserProfileSerializer(user_profile)
+            return Response(serializer.data)
+        else:
             user_profile = UserProfile.objects.get(pk=pk)
             serializer = UserProfileSerializer(user_profile)
             return Response(serializer.data)
-        except UserProfile.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+    except UserProfile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
 @authentication_classes((TokenAuthentication,))
 @permission_classes((IsAuthenticated,))
-def add_friend(request, friend_id):
+def add_friend(request, user_profile_id):
+    try:
+        user_profile = UserProfile.objects.get(account=request.user)
+    except UserProfile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if int(user_profile.id) == int(user_profile_id):
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        friend = UserProfile.objects.get(pk=user_profile_id)
+    except UserProfile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    user_profile.friends.add(friend)
+    user_profile.save()
+    return Response(status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes((TokenAuthentication,))
+@permission_classes((IsAuthenticated,))
+def remove_friend(request, friend_id):
     try:
         friend = UserProfile.objects.get(pk=friend_id)
     except UserProfile.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
-    user_profile = UserProfile.objects.get(account=request.user)
-    user_profile.friends.add(friend)
+    try:
+        user_profile = UserProfile.objects.get(account=request.user)
+    except UserProfile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    user_profile.friends.remove(friend)
     user_profile.save()
     return Response(status=status.HTTP_200_OK)

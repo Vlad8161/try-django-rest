@@ -4,24 +4,25 @@ from rest_framework import serializers
 from main.models import UserProfile
 
 
-class AccountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'first_name', 'last_name')
-
-
 class FriendSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='account.email')
+    username = serializers.CharField(source='account.username')
+    first_name = serializers.CharField(source='account.first_name')
+    last_name = serializers.CharField(source='account.last_name')
+
     class Meta:
         model = UserProfile
-        fields = ('id', 'account')
-
-    account = AccountSerializer(read_only=True, many=False)
+        fields = ('id', 'email', 'username', 'first_name', 'last_name')
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='account.email')
+    username = serializers.CharField(source='account.username')
+    first_name = serializers.CharField(source='account.first_name')
+    last_name = serializers.CharField(source='account.last_name')
+    friends = FriendSerializer(many=True, read_only=True)
+
     class Meta:
         model = UserProfile
-        fields = ('id', 'account', 'friends')
+        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'friends')
 
-    account = AccountSerializer(many=False, read_only=True)
-    friends = FriendSerializer(many=True, read_only=True)
