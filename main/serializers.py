@@ -26,3 +26,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ('id', 'email', 'username', 'first_name', 'last_name', 'friends')
 
+
+class UpdateProfileSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    User

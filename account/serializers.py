@@ -7,9 +7,9 @@ class RegistrationSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(max_length=40)
     password2 = serializers.CharField(max_length=40)
-    username = serializers.CharField(max_length=40)
-    first_name = serializers.CharField(max_length=40, allow_null=True, allow_blank=True)
-    last_name = serializers.CharField(max_length=40, allow_null=True, allow_blank=True)
+    username = serializers.CharField(max_length=30)
+    first_name = serializers.CharField(max_length=30, allow_null=True, allow_blank=True)
+    last_name = serializers.CharField(max_length=30, allow_null=True, allow_blank=True)
 
     def update(self, instance, validated_data):
         pass
@@ -31,7 +31,7 @@ class RegistrationSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=40)
+    username = serializers.CharField(max_length=30)
     password = serializers.CharField(max_length=40)
 
     def create(self, validated_data):
