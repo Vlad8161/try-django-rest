@@ -4,4 +4,4 @@ from django.db import models
 
 class UserProfile(models.Model):
     account = models.OneToOneField(User)
-    friends = models.ManyToManyField("self")
+    friends = models.ManyToManyField("self", symmetrical=False)
