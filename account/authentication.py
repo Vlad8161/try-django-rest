@@ -31,7 +31,10 @@ class PasswordAuthentication(BaseAuthentication):
 
 class TokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
-        key = request.data.get('token')
+        try:
+            key = request.META['token']
+        except KeyError:
+            raise AuthenticationFailed('No token provided')
 
         try:
             token = Token.objects.get(key=key)

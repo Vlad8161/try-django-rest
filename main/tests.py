@@ -12,9 +12,7 @@ class ProfileTestCase(TestCase):
     def test_get_self_profile_success(self):
         users = init(self.client)
         user = random.choice(users)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertTrue('id' in r.json())
         user['id'] = r.json()['id']
@@ -29,9 +27,7 @@ class ProfileTestCase(TestCase):
 
     def test_get_self_profile_invalid_token(self):
         init(self.client)
-        r = self.client.post('/main/profile', data={
-            'token': '1234567890987654321'
-        })
+        r = self.client.post('/main/profile', token='1234567890987654321')
         self.assertEquals(r.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_profile_by_id_success(self):
@@ -39,14 +35,9 @@ class ProfileTestCase(TestCase):
         user1 = random.choice(users)
         users.remove(user1)
         user2 = random.choice(users)
-        r = self.client.post('/main/profile', data={
-            'token': user1['token']
-        })
+        r = self.client.post('/main/profile', token=user1['token'])
         user1['id'] = r.json()['id']
-
-        r = self.client.post('/main/profile/' + str(user1['id']), data={
-            'token': user2['token']
-        })
+        r = self.client.post('/main/profile/' + str(user1['id']), token=user2['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user1['id'],
@@ -60,18 +51,78 @@ class ProfileTestCase(TestCase):
     def test_get_profile_by_id_not_exist(self):
         users = init(self.client)
         for i in users:
-            r = self.client.post('/main/profile', data={
-                'token': i['token']
-            })
+            r = self.client.post('/main/profile', token=i['token'])
             i['id'] = r.json()['id']
         ids = [i['id'] for i in users]
         not_exist_id = random.randint(0, 9999999999)
         while id in ids:
             not_exist_id = random.randint(0, 9999999999)
-        r = self.client.post('/main/profile/' + str(not_exist_id), data={
-            'token': random.choice(users)['token']
-        })
+        r = self.client.post('/main/profile/' + str(not_exist_id), token=random.choice(users)['token'])
         self.assertEquals(r.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class UpdateProfileTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_update_profile_success(self):
+        users = fill_ids(self.client, init(self.client))
+        user = random.choice(users)
+        r = self.client.post('/main/update-profile', token=user['token'], data={
+            'email': user['email'] + '123',
+            'first_name': user['first_name'] + '123',
+            'last_name': user['last_name'] + '123',
+        })
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        r = self.client.post('/main/profile', token=user['token'])
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        self.assertJSONEqual(str(r.content, encoding='utf-8'), {
+            'id': user['id'],
+            'username': user['username'],
+            'first_name': user['first_name'] + '123',
+            'last_name': user['last_name'] + '123',
+            'email': user['email'] + '123',
+            'friends': [],
+        })
+
+    def test_update_profile_failed_not_all_fields_present(self):
+        users = fill_ids(self.client, init(self.client))
+        user = random.choice(users)
+        r = self.client.post('/main/update-profile', token=user['token'], data={
+            'email': user['email'] + '123',
+            'last_name': user['last_name'] + '123',
+        })
+        self.assertEquals(r.status_code, status.HTTP_400_BAD_REQUEST)
+        r = self.client.post('/main/profile', token=user['token'])
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        self.assertJSONEqual(str(r.content, encoding='utf-8'), {
+            'id': user['id'],
+            'username': user['username'],
+            'first_name': user['first_name'],
+            'last_name': user['last_name'],
+            'email': user['email'],
+            'friends': [],
+        })
+
+    def test_update_profile_success_with_blank_fields(self):
+        users = fill_ids(self.client, init(self.client))
+        user = random.choice(users)
+        r = self.client.post('/main/update-profile', token=user['token'], data={
+            'email': '',
+            'last_name': '',
+            'first_name': '',
+        })
+        self.assertEquals(r.status_code, status.HTTP_400_BAD_REQUEST)
+        r = self.client.post('/main/profile', token=user['token'])
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        self.assertJSONEqual(str(r.content, encoding='utf-8'), {
+            'id': user['id'],
+            'username': user['username'],
+            'first_name': user['first_name'],
+            'last_name': user['last_name'],
+            'email': user['email'],
+            'friends': [],
+        })
 
 
 class FriendsTestCase(TestCase):
@@ -83,13 +134,9 @@ class FriendsTestCase(TestCase):
         user = random.choice(users)
         users.remove(user)
         friend = random.choice(users)
-        r = self.client.post('/main/add-friend/' + str(friend['id']), data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -115,13 +162,9 @@ class FriendsTestCase(TestCase):
         while not_exist_user in ids:
             not_exist_user = random.randint(0, 9999999999)
         user = random.choice(users)
-        r = self.client.post('/main/add-friend/' + str(not_exist_user), data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/add-friend/' + str(not_exist_user), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_404_NOT_FOUND)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -135,13 +178,9 @@ class FriendsTestCase(TestCase):
     def test_add_friend_fail_friend_is_user(self):
         users = fill_ids(self.client, init(self.client))
         user = random.choice(users)
-        r = self.client.post('/main/add-friend/' + str(user['id']), data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/add-friend/' + str(user['id']), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_400_BAD_REQUEST)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -157,16 +196,10 @@ class FriendsTestCase(TestCase):
         user = random.choice(users)
         users.remove(user)
         friend = random.choice(users)
-        self.client.post('/main/add-friend/' + str(friend['id']), data={
-            'token': user['token']
-        })
-        r = self.client.post('/main/remove-friend/' + str(friend['id']), data={
-            'token': user['token']
-        })
+        self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
+        r = self.client.post('/main/remove-friend/' + str(friend['id']), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -184,16 +217,10 @@ class FriendsTestCase(TestCase):
         friend = random.choice(users)
         users.remove(friend)
         friend2 = random.choice(users)
-        self.client.post('/main/add-friend/' + str(friend['id']), data={
-            'token': user['token']
-        })
-        r = self.client.post('/main/remove-friend/' + str(friend2['id']), data={
-            'token': user['token']
-        })
+        self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
+        r = self.client.post('/main/remove-friend/' + str(friend2['id']), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -220,13 +247,9 @@ class FriendsTestCase(TestCase):
         not_exist_user = random.randint(0, 9999999999)
         while not_exist_user in ids:
             not_exist_user = random.randint(0, 9999999999)
-        r = self.client.post('/main/remove-friend/' + str(not_exist_user), data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/remove-friend/' + str(not_exist_user), token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_404_NOT_FOUND)
-        r = self.client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = self.client.post('/main/profile', token=user['token'])
         self.assertEquals(r.status_code, status.HTTP_200_OK)
         self.assertJSONEqual(str(r.content, encoding='utf-8'), {
             'id': user['id'],
@@ -236,7 +259,6 @@ class FriendsTestCase(TestCase):
             'last_name': user['last_name'],
             'friends': [],
         })
-
 
 
 def init(client):
@@ -295,8 +317,6 @@ def init(client):
 
 def fill_ids(client, users):
     for user in users:
-        r = client.post('/main/profile', data={
-            'token': user['token']
-        })
+        r = client.post('/main/profile', token=user['token'])
         user['id'] = r.json()['id']
     return users

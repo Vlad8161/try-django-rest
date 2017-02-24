@@ -157,16 +157,12 @@ class InvalidateTokenTestCase(TestCase):
 
     def test_invalidate_success(self):
         token = add_user_and_obtain_token(self.client)
-        response = self.client.post('/account/invalidate-token', {
-            'token': token
-        })
+        response = self.client.post('/account/invalidate-token', token=token)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
 
     def test_invalidate_fail_unexisting_token(self):
         add_user_and_obtain_token(self.client)
-        response = self.client.post('/account/invalidate-token', {
-            'token': '12335512358910235981278'
-        })
+        response = self.client.post('/account/invalidate-token', token='12335512358910235981278')
         self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertJSONEqual(str(response.content, encoding='utf-8'), {
             'detail': 'Invalid token'
@@ -177,7 +173,7 @@ class InvalidateTokenTestCase(TestCase):
         response = self.client.post('/account/invalidate-token')
         self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertJSONEqual(str(response.content, encoding='utf-8'), {
-            'detail': 'Invalid token'
+            'detail': 'No token provided'
         })
 
 

@@ -28,5 +28,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UpdateProfileSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    User
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(max_length=30, allow_blank=True, required=True)
+    last_name = serializers.CharField(max_length=30, allow_blank=True, required=True)
+
+    def update(self, instance, validated_data):
+        user = instance.account
+        user.email = validated_data.get('email')
+        user.first_name = validated_data.get('first_name')
+        user.last_name = validated_data.get('last_name')
+        user.save()
+        return instance
+
+    def create(self, validated_data):
+        pass
