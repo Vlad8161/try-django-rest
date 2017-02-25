@@ -4,6 +4,8 @@ from django.test import Client
 from django.test import TestCase
 from rest_framework import status
 
+from main.models import UserProfile, FriendRequest
+
 
 class ProfileTestCase(TestCase):
     def setUp(self):
@@ -151,32 +153,7 @@ class FriendsTestCase(TestCase):
                     'email': friend['email'],
                     'first_name': friend['first_name'],
                     'last_name': friend['last_name'],
-                }
-            ]
-        })
-
-    def test_add_friend_not_symmetric(self):
-        users = fill_ids(self.client, init(self.client))
-        user = random.choice(users)
-        users.remove(user)
-        friend = random.choice(users)
-        r = self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
-        self.assertEquals(r.status_code, status.HTTP_200_OK)
-        r = self.client.post('/main/profile', token=user['token'])
-        self.assertEquals(r.status_code, status.HTTP_200_OK)
-        self.assertJSONEqual(str(r.content, encoding='utf-8'), {
-            'id': user['id'],
-            'username': user['username'],
-            'email': user['email'],
-            'first_name': user['first_name'],
-            'last_name': user['last_name'],
-            'friends': [
-                {
-                    'id': friend['id'],
-                    'username': friend['username'],
-                    'email': friend['email'],
-                    'first_name': friend['first_name'],
-                    'last_name': friend['last_name'],
+                    'accepted': False,
                 }
             ]
         })
@@ -190,6 +167,89 @@ class FriendsTestCase(TestCase):
             'last_name': friend['last_name'],
             'friends': []
         })
+        outgoing_requests = UserProfile.objects.get(pk=user['id']).outgoing_requests.all()
+        self.assertEquals(len(outgoing_requests), 1)
+        self.assertEquals(int(outgoing_requests[0].user_from.id), user['id'])
+        self.assertEquals(int(outgoing_requests[0].user_to.id), friend['id'])
+        self.assertEquals(bool(outgoing_requests[0].already_seen), False)
+        incoming_requests = UserProfile.objects.get(pk=friend['id']).incoming_requests.all()
+        self.assertEquals(len(incoming_requests), 1)
+        self.assertEquals(int(incoming_requests[0].user_from.id), user['id'])
+        self.assertEquals(int(incoming_requests[0].user_to.id), friend['id'])
+        self.assertEquals(bool(incoming_requests[0].already_seen), False)
+
+    def test_get_incoming_friend_requests(self):
+        users = fill_ids(self.client, init(self.client))
+        user = random.choice(users)
+        users.remove(user)
+        friend = random.choice(users)
+        self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
+        r = self.client.get('/main/incoming-friend-requests', token=friend['token'])
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        friend_requests = r.json()
+        self.assertTrue(len(friend_requests) == 1)
+        friend_request = friend_requests[0]
+        self.assertTrue('id' in friend_request)
+        friend_request_id = friend_request['id']
+        self.assertJSONEqual(str(r.content, encoding='utf-8'), [
+            {
+                'id': friend_request_id,
+                'user_from': {
+                    'id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'first_name': user['first_name'],
+                    'last_name': user['last_name'],
+                }
+            }
+        ])
+        incoming_requests = UserProfile.objects.get(pk=friend['id']).incoming_requests.all()
+        self.assertEquals(len(incoming_requests), 1)
+        self.assertEquals(int(incoming_requests[0].user_from.id), user['id'])
+        self.assertEquals(int(incoming_requests[0].user_to.id), friend['id'])
+        self.assertEquals(bool(incoming_requests[0].already_seen), True)
+
+    def test_get_outgoing_friend_requests(self):
+        users = fill_ids(self.client, init(self.client))
+        user = random.choice(users)
+        users.remove(user)
+        friend = random.choice(users)
+        self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
+        r = self.client.get('/main/outgoing-friend-requests', token=user['token'])
+        self.assertEquals(r.status_code, status.HTTP_200_OK)
+        friend_requests = r.json()
+        self.assertTrue(len(friend_requests) == 1)
+        friend_request = friend_requests[0]
+        self.assertTrue('id' in friend_request)
+        friend_request_id = friend_request['id']
+        self.assertJSONEqual(str(r.content, encoding='utf-8'), [
+            {
+                'id': friend_request_id,
+                'user_to': {
+                    'id': friend['id'],
+                    'username': friend['username'],
+                    'email': friend['email'],
+                    'first_name': friend['first_name'],
+                    'last_name': friend['last_name'],
+                }
+            }
+        ])
+        outgoing_requests = UserProfile.objects.get(pk=friend['id']).incoming_requests.all()
+        self.assertEquals(len(outgoing_requests), 1)
+        self.assertEquals(int(outgoing_requests[0].user_from.id), user['id'])
+        self.assertEquals(int(outgoing_requests[0].user_to.id), friend['id'])
+        self.assertEquals(bool(outgoing_requests[0].already_seen), False)
+
+        # def test_accept_friend_success(self):
+        # users = fill_ids(self.client, init(self.client))
+        # user = random.choice(users)
+        # users.remove(user)
+        # friend = random.choice(users)
+        # self.client.post('/main/add-friend/' + str(friend['id']), token=user['token'])
+        # r = self.client.get('/main/incoming-friend-requests', token=friend['token'])
+        # friend_request_id = r.json()['id']
+        # r = self.client.post('/main/accept-friend-request/' + str(friend_request_id), token=friend['token'])
+        # self.assertEquals(r.status_code, status.HTTP_200_OK)
 
     def test_add_friend_fail_no_such_user(self):
         users = fill_ids(self.client, init(self.client))
@@ -245,6 +305,10 @@ class FriendsTestCase(TestCase):
             'last_name': user['last_name'],
             'friends': [],
         })
+        outgoing_requests = UserProfile.objects.get(pk=user['id']).outgoing_requests.all()
+        self.assertEquals(len(outgoing_requests), 0)
+        incoming_requests = UserProfile.objects.get(pk=friend['id']).incoming_requests.all()
+        self.assertEquals(len(incoming_requests), 0)
 
     def test_remove_friend_success_when_this_user_was_not_friend(self):
         users = fill_ids(self.client, init(self.client))
@@ -271,6 +335,7 @@ class FriendsTestCase(TestCase):
                     'email': friend['email'],
                     'first_name': friend['first_name'],
                     'last_name': friend['last_name'],
+                    'accepted': False,
                 }
             ],
         })
